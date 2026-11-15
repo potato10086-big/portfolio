@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>段宸纬 · 作品集</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E🚄%3C/text%3E%3C/svg%3E">
 
 
 
@@ -394,13 +395,13 @@
 <body>
 
 <div class="video-layer" id="videos">
-  <video class="on" autoplay muted loop playsinline preload="auto"
+  <video class="on" autoplay muted loop playsinline preload="auto" poster="media/v1-poster.jpg"
     src="media/v1.mp4"></video>
-  <video autoplay muted loop playsinline preload="metadata"
+  <video autoplay muted loop playsinline preload="none" poster="media/v2-poster.jpg"
     src="media/v2.mp4"></video>
-  <video autoplay muted loop playsinline preload="metadata"
+  <video autoplay muted loop playsinline preload="none" poster="media/v3-poster.jpg"
     src="media/v3.mp4"></video>
-  <video autoplay muted loop playsinline preload="metadata"
+  <video autoplay muted loop playsinline preload="none" poster="media/v4-poster.jpg"
     src="media/v4.mp4"></video>
 </div>
 
@@ -604,6 +605,7 @@
     videos.forEach(function(v, k){ v.classList.toggle('on', k === i); });
     vbtns.forEach(function(b, k){ b.classList.toggle('active', k === i); });
     body.classList.toggle('dark', i === 2);
+    if (videos[i].preload === "none") { videos[i].preload = "auto"; videos[i].load(); }
     if (videos[i].paused) { videos[i].play().catch(function(){}); }
     setTimeout(function(){ transitioning = false; }, 1000);
   }
