@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FAF6ED">
+<title>一天的手感 · 交互演示</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23FAF6ED'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23C2552B'/%3E%3C/svg%3E">
+<style>
+/* ============================================================
+   一天的手感 —— 交互演示
+   六个微交互：完成反馈 / 勾选联动 / 叠卡展开 / 吸附卡画线 /
+   惯性滚轮 / 圆形扩散转场
+   ============================================================ */
+:root{
+  --ink:#211D18;
+  --ink-2:#5A5148;
+  --ink-3:#7A6F62;
+  --paper:#FAF6ED;
+  --card:#FFFDF9;
+  --accent:#C2552B;
+  --accent-2:#E2894E;
+  --line:rgba(33,29,24,.10);
+  --serif:"Noto Serif SC","Source Han Serif SC","Songti SC","STSong","SimSun",Georgia,serif;
+  --sans:"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+  --ease:cubic-bezier(.22,.61,.36,1);
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  --shadow:0 1px 2px rgba(33,29,24,.05),0 14px 34px -18px rgba(33,29,24,.3);
+}
+*,*::before,*::after{box-sizing:border-box}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+html{ -webkit-text-size-adjust:100%; }
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  overflow-x:hidden;
+}
+body::before{
+  content:"";
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image:radial-gradient(rgba(33,29,24,.05) 1px, transparent 1px);
+  background-size:22px 22px;
+  opacity:.45;
+}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+h1,h2,h3,p,ul,ol,li{margin:0;padding:0}
+ul,ol{list-style:none}
+svg{display:block}
+::selection{background:rgba(194,85,43,.18)}
+
+/* ---------- 外壳 ---------- */
+.stage{
+  position:relative;
+  z-index:1;
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+  width:100%;
+  max-width:560px;
+  margin:0 auto;
+  padding-bottom:118px;
+}
+
+/* ---------- 顶部 ---------- */
+.hero{
+  --hero-a:#FCF8F0;
+  --hero-b:#F6EEDF;
+  --hero-glow:#FFE9C8;
+  --glow-x:26%;
+  --glow-y:6%;
+  position:relative;
+  padding:20px 22px 28px;
+  border-radius:0 0 36px 36px;
+  overflow:hidden;
+  background:
+    radial-gradient(95% 78% at var(--glow-x) var(--glow-y), var(--hero-glow) 0%, rgba(255,236,214,0) 66%),
+    linear-gradient(180deg, var(--hero-a) 0%, var(--hero-b) 100%);
+}
+.hero-meta{
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:10.5px; letter-spacing:.18em; color:var(--ink-3);
+  animation:rise .7s var(--ease) .05s backwards;
+}
+.hero-meta .brand{letter-spacing:.22em}
+.hero-main{
+  display:flex; align-items:flex-end; gap:14px;
+  margin-top:20px;
+}
+.hero-copy{flex:1; min-width:0}
+.hero h1{
+  font-family:var(--serif);
+  font-weight:500;
+  font-size:clamp(33px,9.2vw,44px);
+  line-height:1.24;
+  letter-spacing:.01em;
+  animation:rise .8s var(--ease) .12s backwards;
+}
+.hero-sub{
+  margin-top:14px;
+  font-size:12.5px;
+  letter-spacing:.02em;
+  color:var(--ink-2);
+  min-height:19px;
+  animation:rise .8s var(--ease) .2s backwards;
+}
+.ring{
+  position:relative;
+  flex:0 0 auto;
+  width:92px; height:92px;
+  animation:rise .9s var(--ease) .24s backwards;
+}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring-track{fill:none;stroke:rgba(33,29,24,.09);stroke-width:5}
+.ring-bar{
+  fill:none;stroke:var(--accent);stroke-width:5;stroke-linecap:round;
+  stroke-dasharray:263.894; stroke-dashoffset:263.894;
+  opacity:0;
+  transition:stroke-dashoffset .55s var(--ease-out), stroke .5s linear, opacity .35s var(--ease);
+}
+.ring-num{
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--serif); font-size:21px; font-weight:600; letter-spacing:.02em;
+}
+.ring-num i{font-style:normal;font-size:10px;margin-left:1px;color:var(--ink-3);font-family:var(--sans);align-self:center;margin-top:4px}
+.ring.pulse{animation:ringPulse .7s var(--ease-out)}
+@keyframes ringPulse{
+  0%{transform:scale(1)}
+  35%{transform:scale(1.09)}
+  100%{transform:scale(1)}
+}
+
+/* ---------- 页面容器 ---------- */
+.pages{position:relative}
+.page{display:none}
+.page.is-active{display:block}
+.lede{
+  padding:22px 26px 14px;
+  font-size:12.5px; line-height:1.7; letter-spacing:.02em;
+  color:var(--ink-3);
+}
+.day-pct{
+  display:block;
+  font-style:normal;
+  margin-top:7px;
+  font-size:11px; letter-spacing:.1em;
+  color:rgba(122,111,98,.72);
+}
+
+/* ---------- 今日任务 ---------- */
+.tasks{
+  display:flex; flex-direction:column; gap:10px;
+  padding:0 16px;
+}
+.task{
+  display:flex; align-items:center; gap:13px;
+  padding:13px 15px;
+  background:var(--card);
+  border-radius:18px;
+  box-shadow:var(--shadow);
+  animation:rise .6s var(--ease) backwards;
+  animation-delay:calc(.22s + var(--i,0) * .06s);
+  transition:box-shadow .3s var(--ease), transform .3s var(--ease);
+}
+@media (hover:hover){
+  .task:hover{box-shadow:0 1px 2px rgba(33,29,24,.05),0 18px 40px -20px rgba(33,29,24,.3)}
+}
+.task:active{transform:scale(.995)}
+.check{
+  position:relative; flex:0 0 auto;
+  width:66px; height:32px;
+  border-radius:999px;
+  border:1px solid rgba(33,29,24,.16);
+  display:inline-flex; align-items:center; justify-content:center;
+  transition:width .32s var(--ease-out), background .3s var(--ease), border-color .3s var(--ease);
+}
+.check::after{content:"";position:absolute;inset:-6px -4px;border-radius:999px}
+@media (hover:hover){
+  .check:hover{border-color:rgba(33,29,24,.3);background:rgba(33,29,24,.02)}
+  .task.done .check:hover{background:var(--accent)}
+}
+.check-label{
+  font-size:11px; letter-spacing:.08em; color:var(--ink-2);
+  transition:opacity .14s linear;
+}
+.tick{
+  position:absolute; width:17px; height:17px; opacity:0;
+  transition:opacity .12s linear .16s;
+}
+.tick path{
+  fill:none; stroke:#FFF9F0; stroke-width:2.4;
+  stroke-linecap:round; stroke-linejoin:round;
+  transition:stroke-dashoffset .4s var(--ease-out) .14s;
+}
+.task.done .check{width:32px; background:var(--accent); border-color:var(--accent)}
+.task.done .check-label{opacity:0}
+.task.done .tick{opacity:1}
+.task-main{flex:1; min-width:0}
+.task-title{
+  display:inline-block;
+  max-width:100%;
+  vertical-align:top;
+  font-size:14.5px; line-height:1.45; letter-spacing:.01em;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  position:relative;
+  transition:color .35s var(--ease);
+}
+.task-title::after{
+  content:"";
+  position:absolute; left:0; top:54%; height:1px; width:100%;
+  background:currentColor; opacity:.55;
+  transform:scaleX(0); transform-origin:left center;
+  transition:transform .38s var(--ease-out) .1s;
+}
+.task.done .task-title{color:var(--ink-3)}
+.task.done .task-title::after{transform:scaleX(1)}
+.task-time{
+  display:block; margin-top:3px;
+  font-size:10.5px; letter-spacing:.12em; color:var(--ink-3);
+}
+.task.done .task-time{opacity:.6}
+
+/* ---------- 时间线页 ---------- */
+.reel{
+  display:flex; gap:14px;
+  overflow-x:auto; overflow-y:hidden;
+  scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;
+  padding:8px 12% 20px;
+  scrollbar-width:none;
+  cursor:grab;
+}
+.reel::-webkit-scrollbar{display:none}
+.reel:active{cursor:grabbing}
+.moment-card{
+  position:relative;
+  flex:0 0 100%;
+  min-height:192px;
+  scroll-snap-align:center;
+  display:flex; flex-direction:column; justify-content:space-between;
+  padding:20px 20px 18px;
+  background:var(--card);
+  border-radius:24px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+.moment-card::before{
+  content:"";
+  position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(120% 90% at 100% 0%, rgba(255,224,184,.5), rgba(255,224,184,0) 62%);
+}
+.m-tag{
+  align-self:flex-end;
+  font-size:10px; letter-spacing:.16em; color:var(--ink-3);
+  position:relative;
+}
+.m-time{
+  font-family:var(--serif); font-size:31px; line-height:1;
+  letter-spacing:.02em; color:var(--accent);
+  margin-top:6px;
+}
+.moment-card h3{
+  font-size:16.5px; font-weight:600; letter-spacing:.01em;
+  margin-top:7px;
+}
+.moment-card p{
+  position:relative;
+  font-size:12.5px; line-height:1.75; color:var(--ink-2);
+  margin-top:14px;
+}
+.rail{
+  position:relative;
+  margin:2px 26px 0;
+  height:58px;
+}
+.rail-line{
+  position:absolute; left:0; right:0; top:9px;
+  width:100%; height:2px; overflow:visible;
+}
+.rail-line .base{stroke:rgba(33,29,24,.17);stroke-width:2;stroke-linecap:round}
+.rail-line .fill{
+  stroke:var(--accent); stroke-width:2; stroke-linecap:round;
+  stroke-dasharray:1000; stroke-dashoffset:1000;
+  transition:stroke-dashoffset .34s var(--ease-out);
+}
+.rail-dots{
+  position:relative;
+  display:flex; justify-content:space-between;
+  padding-top:2px;
+}
+.rail-dot{position:relative; width:9px; height:9px}
+.rail-dot::after{content:"";position:absolute;inset:0;border-radius:50%;background:#E3D7C6;transition:all .32s var(--ease-out)}
+.rail-dot.on::after{background:var(--accent);box-shadow:0 0 0 4px rgba(194,85,43,.12)}
+.rail-dot span{
+  position:absolute; top:17px; left:50%;
+  transform:translateX(-50%);
+  font-size:10.5px; letter-spacing:.1em; color:var(--ink-3);
+  white-space:nowrap;
+  transition:color .32s var(--ease-out), opacity .32s;
+}
+.rail-dot.on span{color:var(--accent)}
+.rail-dot:first-child span{left:0; transform:none}
+.rail-dot:last-child span{left:auto; right:0; transform:none}
+
+/* ---------- 叠卡页 ---------- */
+.stack-head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 26px 10px;
+}
+.stack-head .hint{
+  font-size:11px; letter-spacing:.1em; color:var(--ink-3);
+  transition:opacity .3s;
+}
+.stack{
+  position:relative;
+  margin:6px 22px 0;
+  height:230px;
+  transition:height .58s var(--ease);
+}
+.stack-card{
+  position:absolute;
+  left:0; right:0; top:0;
+  padding:18px 20px 17px;
+  background:var(--card);
+  border-radius:22px;
+  box-shadow:0 1px 2px rgba(33,29,24,.05), 0 16px 34px -18px rgba(33,29,24,.34);
+  transform-origin:50% 100%;
+  transition:transform .58s var(--ease), box-shadow .4s var(--ease);
+  will-change:transform;
+  cursor:pointer;
+  overflow:hidden;
+}
+.stack-card::before{
+  content:"";
+  position:absolute; left:0; top:0; bottom:0; width:3px;
+  background:linear-gradient(180deg, var(--accent), rgba(194,85,43,0));
+  opacity:.55;
+}
+.s-top{display:flex; align-items:baseline; justify-content:space-between; gap:12px}
+.s-no{font-family:var(--serif);font-size:11px;letter-spacing:.22em;color:var(--accent)}
+.s-time{font-size:10.5px;letter-spacing:.12em;color:var(--ink-3)}
+.stack-card h3{
+  font-family:var(--serif);
+  font-size:19px; font-weight:500; letter-spacing:.02em;
+  margin-top:12px;
+}
+.stack-card p{
+  font-size:12.5px; line-height:1.75; color:var(--ink-2);
+  margin-top:8px;
+}
+.stack-ghost{pointer-events:none}
+
+/* ---------- 入睡页 ---------- */
+.wheel-wrap{
+  position:relative;
+  margin:4px 22px 0;
+  height:292px;
+  border-radius:26px;
+  overflow:hidden;
+  background:linear-gradient(180deg,#FFFDF9 0%,#FBF4E8 100%);
+  box-shadow:var(--shadow);
+  touch-action:none;
+  user-select:none; -webkit-user-select:none;
+  cursor:grab;
+}
+.wheel-wrap:active{cursor:grabbing}
+.wheel-wrap:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.wheel-band{
+  position:absolute; left:26px; right:26px; top:50%;
+  height:42px; transform:translateY(-50%);
+  border-top:1px solid rgba(194,85,43,.28);
+  border-bottom:1px solid rgba(194,85,43,.28);
+  background:rgba(194,85,43,.035);
+  border-radius:10px;
+  pointer-events:none;
+  z-index:2;
+}
+.wheel-view{position:absolute;inset:0;overflow:hidden}
+.wheel-track{position:absolute;left:0;right:0;top:50%;will-change:transform}
+.wheel-tick{
+  position:absolute; left:0; right:0;
+  height:38px; margin-top:-19px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; letter-spacing:.09em;
+  font-variant-numeric:tabular-nums;
+  color:var(--ink-3);
+  will-change:transform,opacity;
+}
+.wheel-fade{
+  position:absolute; inset:0; z-index:1; pointer-events:none;
+  background:linear-gradient(180deg,
+    #FDFAF3 0%, rgba(253,250,243,0) 24%,
+    rgba(253,250,243,0) 74%, #FBF4E8 100%);
+}
+.sleep-readout{text-align:center;padding:20px 24px 4px}
+.sleep-time{
+  font-family:var(--serif);
+  font-size:40px; font-weight:500; letter-spacing:.04em;
+  font-variant-numeric:tabular-nums;
+  line-height:1.1;
+}
+.sleep-hint{
+  margin-top:8px;
+  font-size:12.5px; letter-spacing:.02em; color:var(--ink-3);
+  min-height:19px;
+}
+.wheel-tip{
+  display:none;
+  margin-top:16px;
+  font-size:10.5px; letter-spacing:.1em;
+  color:rgba(122,111,98,.55);
+}
+@media (hover:hover) and (pointer:fine){
+  .wheel-tip{display:block}
+}
+
+/* ---------- 页脚 ---------- */
+.foot{
+  margin-top:auto;
+  text-align:center;
+  padding:26px 0 4px;
+  font-size:10px; letter-spacing:.28em;
+  color:rgba(33,29,24,.24);
+}
+
+/* ---------- 底部页签 ---------- */
+.tabs{
+  position:fixed; z-index:40;
+  left:50%; bottom:max(14px, calc(env(safe-area-inset-bottom, 0px) + 8px));
+  transform:translateX(-50%);
+  width:min(512px, calc(100vw - 32px));
+  display:flex; align-items:center;
+  padding:7px;
+  background:rgba(255,253,249,.86);
+  -webkit-backdrop-filter:blur(20px) saturate(1.5);
+  backdrop-filter:blur(20px) saturate(1.5);
+  border:1px solid rgba(33,29,24,.06);
+  border-radius:999px;
+  box-shadow:0 14px 40px -12px rgba(33,29,24,.24);
+}
+.tab{
+  flex:1;
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  padding:7px 4px 6px;
+  border-radius:999px;
+  color:var(--ink-3);
+  transition:color .25s var(--ease), background .25s var(--ease);
+}
+.tab svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.tab span{font-size:10px;letter-spacing:.06em}
+.tab:active{background:rgba(33,29,24,.04)}
+.tab.is-active{color:var(--accent);background:rgba(194,85,43,.075)}
+.tab.is-active svg{stroke-width:1.8}
+
+/* ---------- 粒子层 ---------- */
+#fx{
+  position:fixed; inset:0; z-index:90;
+  width:100%; height:100%;
+  pointer-events:none;
+}
+
+@keyframes rise{
+  from{opacity:0;transform:translateY(16px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* ---------- 小屏微调 ---------- */
+@media (max-width:380px){
+  .hero{padding:16px 18px 24px}
+  .ring{width:80px;height:80px}
+  .ring-num{font-size:18px}
+  .check{width:60px}
+  .task{padding:12px 13px;gap:11px}
+  .reel{padding:8px 10% 20px}
+  .moment-card{flex-basis:100%;padding:18px 17px 16px}
+  .stack{margin:6px 16px 0}
+  .wheel-wrap{margin:4px 16px 0}
+}
+
+/* ---------- 减少动态 ---------- */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms !important;
+    animation-delay:0ms !important;
+    transition-duration:.001ms !important;
+  }
+  .reel{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <header class="hero" id="hero">
+    <div class="hero-meta">
+      <span id="dateText">10月31日 · 星期六</span>
+      <span class="brand">一天的手感</span>
+    </div>
+    <div class="hero-main">
+      <div class="hero-copy">
+        <h1>今天，<br>慢慢过。</h1>
+        <p class="hero-sub" id="heroSub" aria-live="polite">做完一件，就点一下。</p>
+      </div>
+      <div class="ring" id="ring">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <circle class="ring-track" cx="50" cy="50" r="42"></circle>
+          <circle class="ring-bar" id="ringBar" cx="50" cy="50" r="42"></circle>
+        </svg>
+        <div class="ring-num"><span id="pct">0</span><i>%</i></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="pages" id="pages">
+
+    <!-- 今天 -->
+    <section class="page is-active" id="page-today" data-page="today" role="tabpanel" aria-label="今天">
+      <p class="lede">五件小事，一件一件来。</p>
+      <ul class="tasks" id="tasks">
+        <li class="task" style="--i:0">
+          <button class="check" type="button" aria-pressed="false" aria-label="完成：把水槽里的碗洗掉">
+            <span class="check-label">完成</span>
+            <svg class="tick" viewBox="0 0 26 26" aria-hidden="true"><path d="M6 13.6 L10.6 18.2 L20 8.4"></path></svg>
+          </button>
+          <div class="task-main">
+            <span class="task-title">把水槽里的碗洗掉</span>
+            <span class="task-time">08:00 · 两分钟的事</span>
+          </div>
+        </li>
+        <li class="task" style="--i:1">
+          <button class="check" type="button" aria-pressed="false" aria-label="完成：回辅导员那条消息">
+            <span class="check-label">完成</span>
+            <svg class="tick" viewBox="0 0 26 26" aria-hidden="true"><path d="M6 13.6 L10.6 18.2 L20 8.4"></path></svg>
+          </button>
+          <div class="task-main">
+            <span class="task-title">回辅导员那条消息</span>
+            <span class="task-time">10:00 · 别拖到明天</span>
+          </div>
+        </li>
+        <li class="task" style="--i:2">
+          <button class="check" type="button" aria-pressed="false" aria-label="完成：高数作业，写到第 3 题">
+            <span class="check-label">完成</span>
+            <svg class="tick" viewBox="0 0 26 26" aria-hidden="true"><path d="M6 13.6 L10.6 18.2 L20 8.4"></path></svg>
+          </button>
+          <div class="task-main">
+            <span class="task-title">高数作业，写到第 3 题</span>
+            <span class="task-time">15:00 · 不求写完</span>
+          </div>
+        </li>
+        <li class="task" style="--i:3">
+          <button class="check" type="button" aria-pressed="false" aria-label="完成：下楼拿快递，顺路买瓶水">
+            <span class="check-label">完成</span>
+            <svg class="tick" viewBox="0 0 26 26" aria-hidden="true"><path d="M6 13.6 L10.6 18.2 L20 8.4"></path></svg>
+          </button>
+          <div class="task-main">
+            <span class="task-title">下楼拿快递，顺路买瓶水</span>
+            <span class="task-time">17:30</span>
+          </div>
+        </li>
+        <li class="task" style="--i:4">
+          <button class="check" type="button" aria-pressed="false" aria-label="完成：给猫添粮，顺手铲铲猫砂">
+            <span class="check-label">完成</span>
+            <svg class="tick" viewBox="0 0 26 26" aria-hidden="true"><path d="M6 13.6 L10.6 18.2 L20 8.4"></path></svg>
+          </button>
+          <div class="task-main">
+            <span class="task-title">给猫添粮，顺手铲铲猫砂</span>
+            <span class="task-time">22:00</span>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- 时间线 -->
+    <section class="page" id="page-timeline" data-page="timeline" role="tabpanel" aria-label="时间线">
+      <p class="lede">左右推一推，松开手，它会自己停。</p>
+      <div class="reel" id="reel" tabindex="0" aria-label="时刻卡片，左右滑动">
+        <article class="moment-card">
+          <span class="m-tag">01 / 清晨</span>
+          <div>
+            <div class="m-time">07:10</div>
+            <h3>窗帘缝先亮</h3>
+          </div>
+          <p>窗帘缝先亮起来。水壶开始响，第一杯水有点烫。</p>
+        </article>
+        <article class="moment-card">
+          <span class="m-tag">02 / 午后</span>
+          <div>
+            <div class="m-time">13:40</div>
+            <h3>影子很短</h3>
+          </div>
+          <p>从食堂回来，影子被太阳压得很短。树底下坐着两个人。</p>
+        </article>
+        <article class="moment-card">
+          <span class="m-tag">03 / 黄昏</span>
+          <div>
+            <div class="m-time">18:20</div>
+            <h3>操场有风</h3>
+          </div>
+          <p>操场边有风。远处有人拍球，一下，一下。</p>
+        </article>
+        <article class="moment-card">
+          <span class="m-tag">04 / 深夜</span>
+          <div>
+            <div class="m-time">23:50</div>
+            <h3>屏幕变暗</h3>
+          </div>
+          <p>台灯只照亮桌角。屏幕自动变暗，我还没睡。</p>
+        </article>
+      </div>
+      <div class="rail" id="rail" aria-hidden="true">
+        <svg class="rail-line" viewBox="0 0 1000 2" preserveAspectRatio="none">
+          <line class="base" x1="0" y1="1" x2="1000" y2="1"></line>
+          <line class="fill" id="railFill" x1="0" y1="1" x2="1000" y2="1"></line>
+        </svg>
+        <ol class="rail-dots">
+          <li class="rail-dot on"><span>清晨</span></li>
+          <li class="rail-dot"><span>午后</span></li>
+          <li class="rail-dot"><span>黄昏</span></li>
+          <li class="rail-dot"><span>深夜</span></li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- 小事 -->
+    <section class="page" id="page-moments" data-page="moments" role="tabpanel" aria-label="手记">
+      <p class="lede">今天顺手记下的几件小事。</p>
+      <div class="stack-head">
+        <span class="hint" id="stackHint">轻点展开</span>
+        <span class="hint" id="stackCount">4 张</span>
+      </div>
+      <div class="stack" id="stack" tabindex="0" role="button" aria-label="手记卡片，点击展开或收起">
+        <article class="stack-card">
+          <div class="s-top"><span class="s-no">NO.01</span><span class="s-time">08:10</span></div>
+          <h3>7 楼的谢谢</h3>
+          <p>电梯里帮人按了楼层，对方说了声谢谢。其实我只是顺手。</p>
+        </article>
+        <article class="stack-card">
+          <div class="s-top"><span class="s-no">NO.02</span><span class="s-time">12:25</span></div>
+          <h3>多一勺土豆</h3>
+          <p>阿姨没说话，勺子多颠了一下。那天的土豆格外好吃。</p>
+        </article>
+        <article class="stack-card">
+          <div class="s-top"><span class="s-no">NO.03</span><span class="s-time">20:05</span></div>
+          <h3>阳台有空地了</h3>
+          <p>攒了三天的袜子终于洗完，晾满了整根杆，看着挺有成就感。</p>
+        </article>
+        <article class="stack-card">
+          <div class="s-top"><span class="s-no">NO.04</span><span class="s-time">22:40</span></div>
+          <h3>一首老歌</h3>
+          <p>路过操场，有人吹口哨，是首老歌。我跟着哼了两句。</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- 夜里 -->
+    <section class="page" id="page-sleep" data-page="sleep" role="tabpanel" aria-label="夜里">
+      <p class="lede">指尖轻轻一拨，它会停在该停的地方。<em class="day-pct" id="dayPct"></em></p>
+      <div class="wheel-wrap" id="wheelWrap" tabindex="0" role="slider"
+           aria-label="选择睡觉时间" aria-valuemin="0" aria-valuemax="14" aria-valuenow="4"
+           aria-valuetext="23:00">
+        <div class="wheel-band"></div>
+        <div class="wheel-view">
+          <div class="wheel-track" id="wheelTrack"></div>
+        </div>
+        <div class="wheel-fade"></div>
+      </div>
+      <div class="sleep-readout">
+        <div class="sleep-time" id="sleepTime">23:00</div>
+        <div class="sleep-hint" id="sleepHint">刚好，放下手机就行。</div>
+        <p class="wheel-tip">拖动滚轮，或用 ↑ ↓ 微调</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="foot">拖一拖 · 点一点 · 滑一滑</footer>
+</div>
+
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<nav class="tabs" role="tablist" aria-label="页面切换">
+  <button class="tab is-active" role="tab" data-tab="today" aria-selected="true" tabindex="0">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 3.2v2M12 18.8v2M3.2 12h2M18.8 12h2M5.9 5.9l1.4 1.4M16.7 16.7l1.4 1.4M18.1 5.9l-1.4 1.4M7.3 16.7l-1.4 1.4"></path></svg>
+    <span>今天</span>
+  </button>
+  <button class="tab" role="tab" data-tab="timeline" aria-selected="false" tabindex="-1">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.5l5-6 4 3.4 3.4-5 5.6 7.6"></path><circle cx="8" cy="11.5" r="1.3"></circle><circle cx="15.4" cy="9.9" r="1.3"></circle></svg>
+    <span>时间线</span>
+  </button>
+  <button class="tab" role="tab" data-tab="moments" aria-selected="false" tabindex="-1">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="9" width="16" height="10" rx="2.4"></rect><path d="M6.5 9V7.6A2.6 2.6 0 019.1 5h5.8a2.6 2.6 0 012.6 2.6V9"></path></svg>
+    <span>手记</span>
+  </button>
+  <button class="tab" role="tab" data-tab="sleep" aria-selected="false" tabindex="-1">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13.4A8 8 0 1110.6 4a6.4 6.4 0 009.4 9.4z"></path></svg>
+    <span>夜里</span>
+  </button>
+</nav>
+
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var clamp = function (v, a, b) { return v < a ? a : (v > b ? b : v); };
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* =========================================================
+     1. 日期
+     ========================================================= */
+  (function () {
+    var d = new Date();
+    var week = ['日', '一', '二', '三', '四', '五', '六'];
+    $('#dateText').textContent = (d.getMonth() + 1) + '月' + d.getDate() + '日 · 星期' + week[d.getDay()];
+  })();
+
+  /* =========================================================
+     2. 粒子层
+     ========================================================= */
+  var fx = $('#fx');
+  var fxc = fx.getContext('2d');
+  var fxW = 0, fxH = 0, fxDpr = 1;
+  var parts = [], fxRaf = 0, fxLast = 0;
+
+  function sizeFx() {
+    fxDpr = Math.min(2, window.devicePixelRatio || 1);
+    fxW = window.innerWidth;
+    fxH = window.innerHeight;
+    fx.width = Math.floor(fxW * fxDpr);
+    fx.height = Math.floor(fxH * fxDpr);
+    fxc.setTransform(fxDpr, 0, 0, fxDpr, 0, 0);
+  }
+  sizeFx();
+  window.addEventListener('resize', sizeFx);
+
+  var PALETTE = ['#C2552B', '#E2894E', '#F0B07A', '#FFF1DC', '#9FB18F'];
+
+  function burst(cx, cy, count, power) {
+    if (reduced) return;
+    count = count || 18;
+    power = power || 1;
+    for (var i = 0; i < count; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var sp = (1.1 + Math.random() * 3.1) * power;
+      parts.push({
+        x: cx, y: cy,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp - 0.75 * power,
+        life: 0,
+        ttl: 520 + Math.random() * 460,
+        r: 1.7 + Math.random() * 2.8,
+        c: PALETTE[(Math.random() * PALETTE.length) | 0],
+        drag: 0.972 + Math.random() * 0.02
+      });
+    }
+    if (!fxRaf) fxRaf = requestAnimationFrame(loopFx);
+  }
+
+  function loopFx(t) {
+    if (!fxLast) fxLast = t;
+    var dt = Math.min(34, t - fxLast);
+    fxLast = t;
+    var k = dt / 16.67;
+    fxc.clearRect(0, 0, fxW, fxH);
+    for (var i = parts.length - 1; i >= 0; i--) {
+      var p = parts[i];
+      p.life += dt;
+      if (p.life >= p.ttl) { parts.splice(i, 1); continue; }
+      var f = 1 - p.life / p.ttl;
+      p.vx *= Math.pow(p.drag, k);
+      p.vy = p.vy * Math.pow(p.drag, k) + 0.055 * k;
+      p.x += p.vx * k;
+      p.y += p.vy * k;
+      fxc.globalAlpha = Math.min(1, f * 1.7) * 0.95;
+      fxc.fillStyle = p.c;
+      fxc.beginPath();
+      fxc.arc(p.x, p.y, p.r * (0.35 + f * 0.95), 0, Math.PI * 2);
+      fxc.fill();
+    }
+    fxc.globalAlpha = 1;
+    if (parts.length) {
+      fxRaf = requestAnimationFrame(loopFx);
+    } else {
+      fxRaf = 0;
+      fxLast = 0;
+      fxc.clearRect(0, 0, fxW, fxH);
+    }
+  }
+
+  function centerOf(el) {
+    var r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2, r: r };
+  }
+
+  /* =========================================================
+     3. 进度环 + 背景 + 数字滚动
+     ========================================================= */
+  var hero = $('#hero');
+  var ring = $('#ring');
+  var ringBar = $('#ringBar');
+  var pctEl = $('#pct');
+  var heroSub = $('#heroSub');
+  var CIRC = 2 * Math.PI * 42;
+
+  function hex2rgb(h) {
+    h = h.replace('#', '');
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  }
+  function mix(a, b, t) {
+    var A = hex2rgb(a), B = hex2rgb(b);
+    return 'rgb(' + Math.round(A[0] + (B[0] - A[0]) * t) + ',' +
+      Math.round(A[1] + (B[1] - A[1]) * t) + ',' +
+      Math.round(A[2] + (B[2] - A[2]) * t) + ')';
+  }
+  var SKY = [
+    { a: '#FCF8F0', b: '#F6EEDF', g: '#FFE9C8' },
+    { a: '#FBEDDA', b: '#F4DFC6', g: '#FFD6A5' },
+    { a: '#F8E2C8', b: '#EFCFAC', g: '#FFBE84' }
+  ];
+  function skyAt(p) {
+    var i = p < 0.5 ? 0 : 1;
+    var x = p < 0.5 ? p / 0.5 : (p - 0.5) / 0.5;
+    return {
+      a: mix(SKY[i].a, SKY[i + 1].a, x),
+      b: mix(SKY[i].b, SKY[i + 1].b, x),
+      g: mix(SKY[i].g, SKY[i + 1].g, x)
+    };
+  }
+
+  var shownPct = 0;
+  var pctRaf = 0;
+  var totalTasks = 0;
+
+  function paintProgress(progress) {
+    ringBar.style.strokeDashoffset = String(CIRC * (1 - progress));
+    ringBar.style.opacity = progress > 0.001 ? '1' : '0';
+    pctEl.textContent = String(Math.round(progress * 100));
+    var s = skyAt(progress);
+    hero.style.setProperty('--hero-a', s.a);
+    hero.style.setProperty('--hero-b', s.b);
+    hero.style.setProperty('--hero-glow', s.g);
+    hero.style.setProperty('--glow-x', (26 + progress * 46) + '%');
+  }
+
+  function setProgress(target, animate) {
+    var from = shownPct;
+    var dur = animate && !reduced ? 480 : 0;
+    var t0 = performance.now();
+    cancelAnimationFrame(pctRaf);
+    if (!dur) {
+      shownPct = target;
+      paintProgress(target);
+      return;
+    }
+    (function step(t) {
+      var k = Math.min(1, (t - t0) / dur);
+      var e = 1 - Math.pow(1 - k, 3);
+      shownPct = from + (target - from) * e;
+      paintProgress(shownPct);
+      if (k < 1) pctRaf = requestAnimationFrame(step);
+    })(t0);
+  }
+
+  /* =========================================================
+     4. 任务：完成反馈 + 勾选联动
+     ========================================================= */
+  var tasksEl = $('#tasks');
+  var celebrated = false;
+
+  (function initTicks() {
+    $$('.tick path').forEach(function (p) {
+      var len = p.getTotalLength();
+      p.style.strokeDasharray = len;
+      p.style.strokeDashoffset = len;
+    });
+  })();
+
+  function refreshProgress() {
+    var total = tasksEl.children.length;
+    var done = $$('.task.done', tasksEl).length;
+    var progress = total ? done / total : 0;
+
+    setProgress(progress, true);
+
+    if (done === 0) {
+      heroSub.textContent = '做完一件，就点一下。';
+    } else if (done === total) {
+      heroSub.textContent = '都做完了。剩下的时间，留给自己。';
+    } else {
+      heroSub.textContent = '还剩 ' + (total - done) + ' 件，不着急。';
+    }
+
+    if (done === total && !celebrated) {
+      celebrated = true;
+      ring.classList.remove('pulse');
+      void ring.offsetWidth;
+      ring.classList.add('pulse');
+      var c = centerOf(ring);
+      burst(c.x, c.y, 24, 1.2);
+      setTimeout(function () { burst(c.x, c.y - 10, 14, 0.9); }, 180);
+    }
+    if (done < total) celebrated = false;
+  }
+
+  tasksEl.addEventListener('click', function (e) {
+    var btn = e.target.closest('.check');
+    if (!btn) return;
+    var li = btn.closest('.task');
+    var done = li.classList.contains('done');
+    var path = $('.tick path', btn);
+    var title = $('.task-title', li).textContent;
+
+    if (done) {
+      li.classList.remove('done');
+      btn.setAttribute('aria-pressed', 'false');
+      btn.setAttribute('aria-label', '完成：' + title);
+      path.style.strokeDashoffset = path.style.strokeDasharray;
+    } else {
+      li.classList.add('done');
+      btn.setAttribute('aria-pressed', 'true');
+      btn.setAttribute('aria-label', '撤销：' + title);
+      path.style.strokeDashoffset = '0';
+      var c = centerOf(btn);
+      burst(c.x, c.y, 14, 0.95);
+    }
+    refreshProgress();
+  });
+
+  /* =========================================================
+     5. 页签 + 圆形扩散转场
+     ========================================================= */
+  var pagesEl = $('#pages');
+  var tabs = $$('.tab');
+  var tabNames = ['today', 'timeline', 'moments', 'sleep'];
+  var currentPage = 'today';
+  var switching = false;
+  var pendingSwitch = null;
+  var switchToken = 0;
+
+  function pageEl(name) { return document.getElementById('page-' + name); }
+
+  function switchPage(name, ox, oy) {
+    if (name === currentPage && !switching) return;
+    if (switching) {
+      pendingSwitch = { name: name, ox: ox, oy: oy };
+      return;
+    }
+    var oldPage = pageEl(currentPage);
+    var newPage = pageEl(name);
+    var oldH = pagesEl.offsetHeight;
+    var token = ++switchToken;
+
+    switching = true;
+    pagesEl.style.height = oldH + 'px';
+
+    newPage.style.position = 'absolute';
+    newPage.style.top = '0';
+    newPage.style.left = '0';
+    newPage.style.right = '0';
+    newPage.style.display = 'block';
+    newPage.style.zIndex = '5';
+    newPage.style.background = '#FAF6ED';
+    newPage.style.willChange = 'clip-path';
+    newPage.style.clipPath = 'circle(0px at ' + ox + 'px ' + oy + 'px)';
+
+    if (!reduced) {
+      oldPage.style.transition = 'opacity .5s cubic-bezier(.22,.61,.36,1)';
+      oldPage.style.opacity = '0.28';
+    }
+
+    // 强制回流，让初始 clip 生效
+    void newPage.offsetHeight;
+
+    var w = pagesEl.offsetWidth || 1;
+    var h = newPage.offsetHeight || 1;
+    var radius = Math.sqrt(w * w + h * h) * 0.62 + 40;
+
+    var finish = function () {
+      if (token !== switchToken) return;
+      switching = false;
+      newPage.style.cssText = '';
+      newPage.classList.add('is-active');
+      oldPage.classList.remove('is-active');
+      oldPage.style.transition = '';
+      oldPage.style.opacity = '';
+      pagesEl.style.height = '';
+      pagesEl.style.transition = '';
+      currentPage = name;
+      if (name === 'timeline') settleReel(true);
+      if (name === 'sleep') refreshWheel();
+      if (pendingSwitch) {
+        var p = pendingSwitch;
+        pendingSwitch = null;
+        if (p.name !== currentPage) switchPage(p.name, p.ox, p.oy);
+      }
+    };
+
+    if (reduced) {
+      finish();
+      updateTabState(name);
+      return;
+    }
+
+    requestAnimationFrame(function () {
+      newPage.style.transition = 'clip-path .48s cubic-bezier(.22,.61,.36,1)';
+      newPage.style.clipPath = 'circle(' + radius + 'px at ' + ox + 'px ' + oy + 'px)';
+      pagesEl.style.transition = 'height .48s cubic-bezier(.22,.61,.36,1)';
+      pagesEl.style.height = h + 'px';
+    });
+
+    newPage.addEventListener('transitionend', function onEnd(ev) {
+      if (ev.target !== newPage) return;
+      newPage.removeEventListener('transitionend', onEnd);
+      finish();
+    });
+    setTimeout(function () { if (switching) finish(); }, 700);
+
+    updateTabState(name);
+  }
+
+  function updateTabState(name) {
+    tabs.forEach(function (t) {
+      var on = t.getAttribute('data-tab') === name;
+      t.classList.toggle('is-active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.setAttribute('tabindex', on ? '0' : '-1');
+    });
+  }
+
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function (e) {
+      var name = tab.getAttribute('data-tab');
+      if (name === currentPage && !switching) return;
+      var r = tab.getBoundingClientRect();
+      var px = (e.clientX && e.clientX > 0) ? e.clientX : r.left + r.width / 2;
+      var py = (e.clientY && e.clientY > 0) ? e.clientY : r.top + r.height / 2;
+      window.scrollTo(0, 0);
+      var pr = pagesEl.getBoundingClientRect();
+      switchPage(name, px - pr.left, py - pr.top);
+    });
+  });
+
+  // 键盘：左右方向键切换页签
+  document.querySelector('.tabs').addEventListener('keydown', function (e) {
+    var idx = tabNames.indexOf(currentPage);
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      var n = tabNames[(idx + 1) % tabNames.length];
+      var t = tabs[tabNames.indexOf(n)];
+      var r = t.getBoundingClientRect();
+      window.scrollTo(0, 0);
+      var pr = pagesEl.getBoundingClientRect();
+      switchPage(n, r.left + r.width / 2 - pr.left, r.top + r.height / 2 - pr.top);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      var p = tabNames[(idx - 1 + tabNames.length) % tabNames.length];
+      var t2 = tabs[tabNames.indexOf(p)];
+      var r2 = t2.getBoundingClientRect();
+      window.scrollTo(0, 0);
+      var pr2 = pagesEl.getBoundingClientRect();
+      switchPage(p, r2.left + r2.width / 2 - pr2.left, r2.top + r2.height / 2 - pr2.top);
+    }
+  });
+
+  /* =========================================================
+     6. 时间线：吸附卡 + 时间轴逐段绘制
+     ========================================================= */
+  var reel = $('#reel');
+  var momentCards = $$('.moment-card', reel);
+  var railFill = $('#railFill');
+  var railDots = $$('.rail-dot');
+  var activeMoment = -1;
+  var settleTimer = 0;
+  var railTimer = 0;
+  var railDrawn = 0;
+  var RAIL_LEN = 1000;
+
+  function momentIndex() {
+    var rr = reel.getBoundingClientRect();
+    var center = rr.left + rr.width / 2;
+    var best = 0, bestD = Infinity;
+    momentCards.forEach(function (c, i) {
+      var r = c.getBoundingClientRect();
+      var d = Math.abs(r.left + r.width / 2 - center);
+      if (d < bestD) { bestD = d; best = i; }
+    });
+    return best;
+  }
+
+  function setRail(seg) {
+    railDrawn = seg;
+    var p = momentCards.length > 1 ? (seg - 1) / (momentCards.length - 1) : 0;
+    railFill.style.strokeDashoffset = String(RAIL_LEN * (1 - p));
+    railDots.forEach(function (d, i) { d.classList.toggle('on', i < seg); });
+  }
+
+  function drawRailTo(seg, delay) {
+    clearTimeout(railTimer);
+    var step = function () {
+      if (railDrawn === seg) return;
+      if (railDrawn < seg) {
+        setRail(railDrawn + 1);
+        railTimer = setTimeout(step, 175);
+      } else {
+        setRail(railDrawn - 1);
+        railTimer = setTimeout(step, 80);
+      }
+    };
+    railTimer = setTimeout(step, delay == null ? 130 : delay);
+  }
+
+  function settleReel(force) {
+    var i = momentIndex();
+    if (i === activeMoment && !force) return;
+    var first = activeMoment === -1;
+    activeMoment = i;
+    drawRailTo(i + 1, first ? 320 : 170);
+  }
+
+  reel.addEventListener('scroll', function () {
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(function () { settleReel(false); }, 130);
+  }, { passive: true });
+
+  if ('onscrollend' in window) {
+    reel.addEventListener('scrollend', function () {
+      clearTimeout(settleTimer);
+      settleReel(false);
+    });
+  }
+
+  // 键盘左右键推动卡片带
+  reel.addEventListener('keydown', function (e) {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    var i = clamp(momentIndex() + (e.key === 'ArrowRight' ? 1 : -1), 0, momentCards.length - 1);
+    var target = momentCards[i];
+    reel.scrollTo({
+      left: target.offsetLeft - (reel.clientWidth - target.offsetWidth) / 2,
+      behavior: reduced ? 'auto' : 'smooth'
+    });
+  });
+
+  /* =========================================================
+     7. 小事：叠卡展开 / 收起
+     ========================================================= */
+  var stack = $('#stack');
+  var stackCards = $$('.stack-card', stack);
+  var stackHint = $('#stackHint');
+  var stackOpen = false;
+  var ROT = [-0.7, 1.15, -1.5, 0.85];
+  var LIFT = 16;
+  var STACK_GAP = 14;
+
+  function layoutStack(open, animate) {
+    var y = 0;
+    stackCards.forEach(function (c, i) {
+      if (!animate) c.style.transition = 'none';
+      var h = c.offsetHeight;
+      if (open) {
+        c.style.transform = 'translate3d(0,' + y + 'px,0) scale(1) rotate(0deg)';
+        c.style.zIndex = String(i + 1);
+        y += h + STACK_GAP;
+      } else {
+        c.style.transform = 'translate3d(0,' + (i * LIFT) + 'px,0) scale(' + (1 - i * 0.035).toFixed(3) + ') rotate(' + ROT[i] + 'deg)';
+        c.style.zIndex = String(20 - i);
+      }
+      c.style.transitionDelay = animate
+        ? (open ? (i * 58) + 'ms' : ((stackCards.length - 1 - i) * 46) + 'ms')
+        : '0ms';
+    });
+    var height = open
+      ? (y - STACK_GAP)
+      : (stackCards[0].offsetHeight + (stackCards.length - 1) * LIFT);
+    stack.style.height = height + 'px';
+    if (!animate) {
+      void stack.offsetHeight;
+      stackCards.forEach(function (c) { c.style.transition = ''; });
+    }
+  }
+
+  function toggleStack() {
+    stackOpen = !stackOpen;
+    stack.classList.toggle('is-open', stackOpen);
+    stackHint.textContent = stackOpen ? '轻点收起' : '轻点展开';
+    layoutStack(stackOpen, true);
+    if (stackOpen) {
+      setTimeout(function () {
+        if (!stackOpen) return;
+        var last = stackCards[stackCards.length - 1];
+        var r = last.getBoundingClientRect();
+        var tabsTop = document.querySelector('.tabs').getBoundingClientRect().top;
+        var over = r.bottom - (tabsTop - 16);
+        if (over > 0) {
+          window.scrollBy({
+            top: Math.min(over + 24, 260),
+            behavior: reduced ? 'auto' : 'smooth'
+          });
+        }
+      }, 680);
+    }
+  }
+
+  stack.addEventListener('click', toggleStack);
+  stack.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleStack();
+    }
+  });
+  stack.addEventListener('pointerdown', function () {
+    stackCards.forEach(function (c) { c.style.transitionDelay = '0ms'; });
+  });
+
+  window.addEventListener('resize', function () {
+    layoutStack(stackOpen, false);
+  });
+
+  /* =========================================================
+     8. 入睡：惯性滚轮 + 吸附 + 橡皮筋
+     ========================================================= */
+  var wheelWrap = $('#wheelWrap');
+  var wheelTrack = $('#wheelTrack');
+  var sleepTime = $('#sleepTime');
+  var sleepHint = $('#sleepHint');
+  var ITEM = 38;
+  var START = 22 * 60;       // 22:00
+  var STEP = 15;
+  var COUNT = 15;            // 22:00 → 01:30
+  var wheelTicks = [];
+  var pos = 4;               // 23:00
+  var vel = 0;
+  var dragging = false;
+  var dragStartY = 0;
+  var dragStartPos = 4;
+  var lastY = 0;
+  var lastT = 0;
+  var springRaf = 0;
+  var lastIdx = -1;
+  var userTouched = false;
+
+  function timeLabel(i) {
+    var m = START + i * STEP;
+    var hh = Math.floor(m / 60) % 24;
+    var mm = m % 60;
+    return (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
+  }
+
+  var HINTS = [
+    [0, 1, '还早，不用急着睡。'],
+    [2, 3, '这个点睡，明天会轻快些。'],
+    [4, 5, '刚好，放下手机就行。'],
+    [6, 7, '有点晚，但还来得及。'],
+    [8, 14, '明天晚起十分钟吧。']
+  ];
+  function hintFor(i) {
+    for (var k = 0; k < HINTS.length; k++) {
+      if (i >= HINTS[k][0] && i <= HINTS[k][1]) return HINTS[k][2];
+    }
+    return '';
+  }
+
+  (function buildWheel() {
+    for (var i = 0; i < COUNT; i++) {
+      var el = document.createElement('div');
+      el.className = 'wheel-tick';
+      el.style.top = (i * ITEM) + 'px';
+      el.textContent = timeLabel(i);
+      wheelTrack.appendChild(el);
+      wheelTicks.push(el);
+    }
+  })();
+
+  function renderWheel() {
+    wheelTrack.style.transform = 'translate3d(0,' + (-pos * ITEM) + 'px,0)';
+    var idx = clamp(Math.round(pos), 0, COUNT - 1);
+    for (var i = 0; i < wheelTicks.length; i++) {
+      var el = wheelTicks[i];
+      var d = Math.abs(i - pos);
+      var o = Math.max(0.10, 1 - d / 4.2);
+      var s = Math.max(0.76, 1 - d * 0.062);
+      el.style.opacity = o.toFixed(3);
+      el.style.transform = 'scale(' + s.toFixed(3) + ')';
+      el.style.fontWeight = d < 0.55 ? '600' : '400';
+      el.style.color = d < 0.55 ? 'var(--accent)' : 'var(--ink-3)';
+    }
+    if (idx !== lastIdx) {
+      lastIdx = idx;
+      sleepTime.textContent = timeLabel(idx);
+      sleepHint.textContent = hintFor(idx);
+      wheelWrap.setAttribute('aria-valuenow', String(idx));
+      wheelWrap.setAttribute('aria-valuetext', timeLabel(idx));
+      if (userTouched && navigator.vibrate) { try { navigator.vibrate(7); } catch (err) {} }
+    }
+  }
+
+  function refreshWheel() { renderWheel(); }
+
+  function springTo(target) {
+    cancelAnimationFrame(springRaf);
+    if (reduced) { pos = target; renderWheel(); return; }
+    var v = 0;
+    var k = 0.17, damp = 0.76;
+    var step = function () {
+      var dx = target - pos;
+      v = (v + dx * k) * damp;
+      pos += v;
+      if (Math.abs(dx) < 0.0015 && Math.abs(v) < 0.0015) {
+        pos = target;
+        renderWheel();
+        return;
+      }
+      renderWheel();
+      springRaf = requestAnimationFrame(step);
+    };
+    springRaf = requestAnimationFrame(step);
+  }
+
+  function onDown(e) {
+    if (e.button != null && e.button !== 0) return;
+    userTouched = true;
+    dragging = true;
+    dragStartY = e.clientY;
+    dragStartPos = pos;
+    lastY = e.clientY;
+    lastT = performance.now();
+    vel = 0;
+    cancelAnimationFrame(springRaf);
+    try { wheelWrap.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
+  }
+
+  function onMove(e) {
+    if (!dragging) return;
+    var now = performance.now();
+    var dy = e.clientY - dragStartY;
+    var raw = dragStartPos - dy / ITEM;
+
+    // 橡皮筋阻尼
+    if (raw < 0) raw = 0 - (0 - raw) * 0.32;
+    if (raw > COUNT - 1) raw = (COUNT - 1) + (raw - (COUNT - 1)) * 0.32;
+    pos = raw;
+
+    var dt = now - lastT;
+    if (dt > 0 && dt < 120) {
+      var vv = (lastY - e.clientY) / ITEM / dt;   // 刻度/毫秒
+      vel = vel * 0.55 + vv * 0.45;
+    }
+    lastY = e.clientY;
+    lastT = now;
+    renderWheel();
+    e.preventDefault();
+  }
+
+  function onUp(e) {
+    if (!dragging) return;
+    dragging = false;
+    var now = performance.now();
+    var v = (now - lastT > 110) ? 0 : vel;
+
+    var projected = pos + clamp(v, -0.05, 0.05) * 80;
+    var target = clamp(Math.round(projected), 0, COUNT - 1);
+    springTo(target);
+  }
+
+  wheelWrap.addEventListener('pointerdown', onDown);
+  window.addEventListener('pointermove', onMove, { passive: false });
+  window.addEventListener('pointerup', onUp);
+  window.addEventListener('pointercancel', onUp);
+
+  wheelWrap.addEventListener('keydown', function (e) {
+    userTouched = true;
+    var k = e.key;
+    var target = null;
+    if (k === 'ArrowUp') target = Math.round(pos) - 1;
+    else if (k === 'ArrowDown') target = Math.round(pos) + 1;
+    else if (k === 'PageUp') target = Math.round(pos) - 3;
+    else if (k === 'PageDown') target = Math.round(pos) + 3;
+    else if (k === 'Home') target = 0;
+    else if (k === 'End') target = COUNT - 1;
+    if (target === null) return;
+    e.preventDefault();
+    springTo(clamp(target, 0, COUNT - 1));
+  });
+
+  /* =========================================================
+     9. 初始化
+     ========================================================= */
+  (function initDayPct() {
+    var now = new Date();
+    var mins = now.getHours() * 60 + now.getMinutes();
+    var p = Math.round(mins / 1440 * 100);
+    var el = $('#dayPct');
+    if (el) el.textContent = '今天已经过了 ' + p + '%。';
+  })();
+
+  totalTasks = tasksEl.children.length;
+  paintProgress(0);
+  refreshProgress();
+  layoutStack(false, false);
+  renderWheel();
+  updateTabState('today');
+
+  // 页面尺寸变化时，若当前在叠卡页，重算高度
+  window.addEventListener('load', function () {
+    layoutStack(stackOpen, false);
+    renderWheel();
+  });
+
+  // 暴露一点调试信息，方便验收
+  window.__DAY = {
+    version: '1.0',
+    pages: tabNames,
+    get state() {
+      return {
+        tasks: $$('.task.done', tasksEl).length + '/' + totalTasks,
+        page: currentPage,
+        moment: activeMoment,
+        stackOpen: stackOpen,
+        sleep: timeLabel(clamp(Math.round(pos), 0, COUNT - 1))
+      };
+    }
+  };
+})();
+</script>
+</body>
+</html>
