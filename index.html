@@ -7,8 +7,17 @@
 <link rel="preload" as="image" href="media/win-frame.webp" fetchpriority="high">
 <link rel="preload" as="image" href="media/v1-poster.jpg" fetchpriority="high">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E🚄%3C/text%3E%3C/svg%3E">
-
-
+<meta name="description" content="段宸纬的作品集：6 件作品、3 种媒介——3D 拆解、手势粒子动效、网页与交互。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="段宸纬 · 作品集">
+<meta property="og:description" content="6 件作品、3 种媒介：3D 拆解、手势粒子动效、网页与交互。">
+<meta property="og:image" content="https://potato10086-big.github.io/portfolio/images/01-poster.jpg">
+<meta property="og:url" content="https://potato10086-big.github.io/portfolio/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="段宸纬 · 作品集">
+<meta name="twitter:description" content="6 件作品、3 种媒介：3D 拆解、手势粒子动效、网页与交互。">
+<meta name="twitter:image" content="https://potato10086-big.github.io/portfolio/images/01-poster.jpg">
+<meta name="theme-color" content="#182C41">
 
 <style>
   @font-face{
@@ -95,7 +104,7 @@
     position:relative;z-index:2;
     height:100vh;height:100svh;
     display:flex;flex-direction:column;
-    padding:0 clamp(18px,4vw,56px);
+    padding:0 clamp(20px,5vw,88px);   /* 边距：手机 20，1440 取 72（检查器口径 64-120） */
     transition:color 700ms var(--ease);
   }
   body.dark .content{color:var(--dark);}
@@ -103,6 +112,9 @@
   body.dark .hero-sub,
   body.dark .switch button{color:rgba(24,44,65,.72);}
   body.dark .video-btn .active-bar{background:var(--dark);}
+
+  /* 内容层级：视频层在 .content 内且 z-index:0，内容必须压在它上面 */
+  nav, .hero, .stats{ position:relative;z-index:2; }
 
   /* 导航 */
   nav{
@@ -114,6 +126,7 @@
     font-style:italic;font-size:clamp(20px,2vw,28px);color:var(--ink);
     letter-spacing:.01em;text-decoration:none;
     text-shadow:0 1px 16px rgba(0,0,0,.55);
+    display:inline-flex;align-items:center;min-height:44px;   /* 触摸热区 ≥44px */
   }
   .nav-pill{
     display:none;align-items:center;gap:6px;
@@ -155,7 +168,8 @@
   }
   .hero-badge{
     display:inline-flex;align-items:center;
-    padding:9px 20px;border-radius:999px;
+    padding:9px 35px 9px 20px;   /* 左 20 右 35：抵掉左侧圆点(6+9)，让文字真正居中 */
+    border-radius:999px;
     font-size:12px;letter-spacing:.04em;color:var(--ink-90);
     margin-bottom:clamp(18px,3.2vh,34px);
     transition:color 700ms var(--ease);
@@ -215,6 +229,7 @@
     background:none;border:none;cursor:pointer;
     color:rgba(255,255,255,.5);
     padding:0 0 6px;position:relative;
+    display:inline-flex;align-items:flex-end;min-height:44px;   /* 触摸热区 ≥44px，文字仍贴底 */
     transition:color .3s;
   }
   .switch button:hover{color:rgba(255,255,255,.8);}
@@ -288,6 +303,7 @@
     display:inline-flex;align-items:center;gap:9px;
     font-family:inherit;font-size:13px;color:var(--ink-90);
     border-radius:999px;padding:12px 26px;cursor:pointer;
+    min-height:44px;   /* 触摸热区 ≥44px */
     transition:color .3s,transform .25s var(--ease);
   }
   .wechat-pill:hover{color:#fff;transform:translateY(-1px);}
@@ -387,6 +403,29 @@
     padding:10px 20px;border-radius:999px;
   }
 
+  /* 键盘可达：跳到正文 */
+  .skip-link{
+    position:absolute;left:12px;top:12px;z-index:80;
+    background:#fff;color:#111;border-radius:999px;
+    padding:10px 18px;font-size:13px;text-decoration:none;
+    transform:translateY(-200%);transition:transform .2s var(--ease);
+  }
+  .skip-link:focus{transform:translateY(0);outline:2px solid #111;outline-offset:2px;}
+
+  /* 循环视频可停（>5s 自动循环的硬要求） */
+  .video-pause{
+    position:fixed;right:clamp(12px,2vw,22px);bottom:clamp(12px,2vh,20px);z-index:50;
+    width:44px;height:44px;border-radius:50%;cursor:pointer;
+    display:grid;place-items:center;color:#fff;
+    background:rgba(12,18,24,.42);border:1px solid rgba(255,255,255,.24);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  }
+  .video-pause:hover{background:rgba(12,18,24,.62);}
+  .video-pause svg{width:16px;height:16px;}
+  .video-pause .i-play{display:none;}
+  .video-pause.paused .i-pause{display:none;}
+  .video-pause.paused .i-play{display:block;}
+
   @media (prefers-reduced-motion:reduce){
     .overlay-img{animation:none;}
     .video-layer video{transition:none;}
@@ -396,30 +435,31 @@
 </head>
 <body>
 
-<div class="video-layer" id="videos">
-  <video class="on" autoplay muted loop playsinline preload="auto" poster="media/v1-poster.jpg"
-    src="media/v1.mp4"></video>
-  <video autoplay muted loop playsinline preload="none" poster="media/v2-poster.jpg"
-    src="media/v2.mp4"></video>
-  <video autoplay muted loop playsinline preload="none" poster="media/v3-poster.jpg"
-    src="media/v3.mp4"></video>
-  <video autoplay muted loop playsinline preload="none" poster="media/v4-poster.jpg"
-    src="media/v4.mp4"></video>
-</div>
+<div class="content" id="main">
 
-<img class="overlay-img" alt="" src="media/win-frame.webp">
-<div class="vignette"></div>
+  <div class="video-layer" id="videos">
+    <video class="on" autoplay muted loop playsinline preload="auto" poster="media/v1-poster.jpg"
+      src="media/v1.mp4"></video>
+    <video autoplay muted loop playsinline preload="none" poster="media/v2-poster.jpg"
+      src="media/v2.mp4"></video>
+    <video autoplay muted loop playsinline preload="none" poster="media/v3-poster.jpg"
+      src="media/v3.mp4"></video>
+    <video autoplay muted loop playsinline preload="none" poster="media/v4-poster.jpg"
+      src="media/v4.mp4"></video>
+  </div>
 
-<div class="content">
+  <img class="overlay-img" alt="" src="media/win-frame.webp">
+  <div class="vignette"></div>
 
   <nav>
-    <a href="#" class="logo">段宸纬</a>
+    <a class="skip-link" href="#hero">跳到正文</a>
+    <a href="index.html" class="logo">段宸纬</a>
 
     <div class="nav-pill liquid-glass ui">
-      <a href="#" data-panel="works">作品</a>
-      <a href="#" data-panel="ability">能力</a>
-      <a href="#" data-panel="about">关于</a>
-      <a href="#" data-panel="contact">联系</a>
+      <a href="#panel-works" data-panel="works">作品</a>
+      <a href="#panel-ability" data-panel="ability">能力</a>
+      <a href="#panel-about" data-panel="about">关于</a>
+      <a href="#panel-contact" data-panel="contact">联系</a>
       <button class="btn-solid" data-panel="works" style="margin-left:6px;">看作品</button>
     </div>
 
@@ -433,14 +473,14 @@
 
   <!-- 手机全屏菜单 -->
   <div class="mobile-menu" id="mobileMenu">
-    <a href="#" data-panel="works">作品</a>
-    <a href="#" data-panel="ability">能力</a>
-    <a href="#" data-panel="about">关于</a>
-    <a href="#" data-panel="contact">联系</a>
+    <a href="#panel-works" data-panel="works">作品</a>
+    <a href="#panel-ability" data-panel="ability">能力</a>
+    <a href="#panel-about" data-panel="about">关于</a>
+    <a href="#panel-contact" data-panel="contact">联系</a>
     <button class="mm-cta" data-panel="works">看作品</button>
   </div>
 
-  <div class="hero">
+  <div class="hero" id="hero">
     <div class="hero-badge liquid-glass ui"><i></i>06 件作品 · 03 种媒介 · 一个人做的</div>
 
     <h1>在嘈杂的世界里，<br>做出 <em>清楚</em> 的东西。</h1>
@@ -452,7 +492,7 @@
 
     <button class="wechat-pill liquid-glass ui" id="copyWechat">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.75"><path d="M8.5 4C4.9 4 2 6.5 2 9.6c0 1.8 1 3.4 2.6 4.4l-.7 2.2 2.5-1.3c.6.2 1.3.3 2 .3"/><path d="M15.5 9c3.6 0 6.5 2.5 6.5 5.6 0 1.8-1 3.4-2.6 4.4l.7 2.2-2.5-1.3c-.6.2-1.3.3-2 .3-3.6 0-6.5-2.5-6.5-5.6S11.9 9 15.5 9z"/></svg>
-      微信 hhh289900 · 点击复制
+      复制微信号 hhh289900
     </button>
 
     <div class="switch ui" id="switch">
@@ -471,6 +511,11 @@
   </div>
 
 </div>
+
+<button class="video-pause" id="videoPause" aria-label="暂停背景视频" aria-pressed="false">
+  <svg class="i-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="7" y="5" width="3.4" height="14" rx="1"/><rect x="13.6" y="5" width="3.4" height="14" rx="1"/></svg>
+  <svg class="i-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.87l10-6.5a1 1 0 0 0 0-1.74l-10-6.5A1 1 0 0 0 8 5.5z"/></svg>
+</button>
 
 <!-- 作品面板 -->
 <div class="panel ui" id="panel-works">
@@ -608,12 +653,40 @@
     vbtns.forEach(function(b, k){ b.classList.toggle('active', k === i); });
     body.classList.toggle('dark', i === 2);
     if (videos[i].preload === "none") { videos[i].preload = "auto"; videos[i].load(); }
-    if (videos[i].paused) { videos[i].play().catch(function(){}); }
+    if (videos[i].paused && !userPaused) { videos[i].play().catch(function(){}); }
     setTimeout(function(){ transitioning = false; }, 1000);
   }
   vbtns.forEach(function(b){
     b.addEventListener('click', function(){ setVideo(parseInt(b.dataset.i, 10)); });
   });
+
+  /* ---------- 背景视频：降动效尊重 + 手动暂停 ---------- */
+  var pauseBtn = document.getElementById('videoPause');
+  var rmQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  var userPaused = !!(rmQuery && rmQuery.matches);
+
+  function reflectPaused(){
+    if (!pauseBtn) return;
+    pauseBtn.classList.toggle('paused', userPaused);
+    pauseBtn.setAttribute('aria-pressed', userPaused ? 'true' : 'false');
+    pauseBtn.setAttribute('aria-label', userPaused ? '播放背景视频' : '暂停背景视频');
+  }
+  function applyPaused(){
+    videos.forEach(function(v){
+      if (userPaused) { v.autoplay = false; v.pause(); }
+      else if (v.classList.contains('on')) { v.play().catch(function(){}); }
+    });
+    reflectPaused();
+  }
+  if (pauseBtn) {
+    pauseBtn.addEventListener('click', function(){ userPaused = !userPaused; applyPaused(); });
+  }
+  if (rmQuery) {
+    applyPaused();                       // 初始：系统开了降动效就停住
+    var onRmChange = function(){ userPaused = rmQuery.matches; applyPaused(); };
+    if (rmQuery.addEventListener) rmQuery.addEventListener('change', onRmChange);
+    else if (rmQuery.addListener) rmQuery.addListener(onRmChange);
+  }
 
   /* ---------- 面板系统 ---------- */
   function closeAll(){
